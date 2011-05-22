@@ -34,6 +34,11 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <glib.h>
+#ifdef __APPLE__
+#include <fuse_version.h>
+#include <libgen.h>
+#include <strings.h>
+#endif
 
 #include "cache.h"
 
@@ -120,6 +125,16 @@
 
 #define SSHNODELAY_SO "sshnodelay.so"
 
+#ifdef __APPLE__
+
+#ifndef LIBDIR
+#define LIBDIR "/usr/local/lib"
+#endif
+
+static char sshfs_program_path[PATH_MAX] = { 0 };
+
+#endif
+
 struct buffer {
 	uint8_t *p;
 	size_t len;
@@ -169,6 +184,9 @@ struct sshfs_file {
 	int connver;
 	int modifver;
 	int refs;
+#ifdef __APPLE__
+	pthread_mutex_t file_lock;
+#endif
 };
 
 struct sshfs {
@@ -208,6 +226,10 @@ struct sshfs {
 	int server_version;
 	unsigned remote_uid;
 	unsigned local_uid;
+#ifdef __APPLE__
+	unsigned remote_gid;
+	unsigned local_gid;
+#endif
 	int remote_uid_detected;
 	unsigned blksize;
 	char *progname;
@@ -641,8 +663,17 @@ static int buf_get_attrs(struct buffer *buf, struct stat *stbuf, int *flagsp)
 		}
 	}
 
+#ifdef __APPLE__
+	if (sshfs.remote_uid_detected) {
+		if (uid == sshfs.remote_uid)
+			uid = sshfs.local_uid;
+		if (gid == sshfs.remote_gid)
+			gid = sshfs.local_gid;
+	}
+#else
 	if (sshfs.remote_uid_detected && uid == sshfs.remote_uid)
 		uid = sshfs.local_uid;
+#endif
 
 	memset(stbuf, 0, sizeof(struct stat));
 	stbuf->st_mode = mode;
@@ -745,11 +776,33 @@ static void ssh_add_arg(const char *arg)
 #ifdef SSH_NODELAY_WORKAROUND
 static int do_ssh_nodelay_workaround(void)
 {
+#ifdef __APPLE__
+	char *oldpreload = getenv("DYLD_INSERT_LIBRARIES");
+#else
 	char *oldpreload = getenv("LD_PRELOAD");
+#endif
 	char *newpreload;
 	char sopath[PATH_MAX];
 	int res;
 
+#ifdef __APPLE__
+	char *sshfs_program_path_base = NULL;
+	if (!sshfs_program_path[0]) {
+		goto nobundle;
+	}
+	sshfs_program_path_base = dirname(sshfs_program_path);
+	if (!sshfs_program_path_base) {
+		goto nobundle;
+	}
+	snprintf(sopath, sizeof(sopath), "%s/%s", sshfs_program_path_base,
+		SSHNODELAY_SO);
+	res = access(sopath, R_OK);
+	if (res == -1) {
+		goto nobundle;
+	}
+	goto pathok;
+nobundle:
+#endif
 	snprintf(sopath, sizeof(sopath), "%s/%s", LIBDIR, SSHNODELAY_SO);
 	res = access(sopath, R_OK);
 	if (res == -1) {
@@ -774,16 +827,24 @@ static int do_ssh_nodelay_workaround(void)
 			return -1;
 		}
 	}
+#ifdef __APPLE__
+pathok:
+#endif
 
 	newpreload = g_strdup_printf("%s%s%s",
 				     oldpreload ? oldpreload : "",
 				     oldpreload ? " " : "",
 				     sopath);
 
+#ifdef __APPLE__
+	if (!newpreload || setenv("DYLD_INSERT_LIBRARIES", newpreload, 1) == -1)
+		fprintf(stderr, "warning: failed set DYLD_INSERT_LIBRARIES for ssh nodelay workaround\n");
+#else
 	if (!newpreload || setenv("LD_PRELOAD", newpreload, 1) == -1) {
 		fprintf(stderr, "warning: failed set LD_PRELOAD "
 			"for ssh nodelay workaround\n");
 	}
+#endif
 	g_free(newpreload);
 	return 0;
 }
@@ -1476,6 +1537,10 @@ static void sftp_detect_uid()
 
 	sshfs.remote_uid = stbuf.st_uid;
 	sshfs.local_uid = getuid();
+#ifdef __APPLE__
+	sshfs.remote_gid = stbuf.st_gid;
+	sshfs.local_gid = getgid();
+#endif
 	sshfs.remote_uid_detected = 1;
 	DEBUG("remote_uid = %i\n", sshfs.remote_uid);
 
@@ -2070,6 +2135,14 @@ static int sshfs_chown(const char *path, uid_t uid, gid_t gid)
 	buf_init(&buf, 0);
 	buf_add_path(&buf, path);
 	buf_add_uint32(&buf, SSH_FILEXFER_ATTR_UIDGID);
+#ifdef __APPLE__
+	if (sshfs.remote_uid_detected) {
+		if (uid == sshfs.local_uid)
+			uid = sshfs.remote_uid;
+		if (gid == sshfs.local_gid)
+			gid = sshfs.remote_gid;
+	}
+#endif
 	buf_add_uint32(&buf, uid);
 	buf_add_uint32(&buf, gid);
 	err = sftp_request(SSH_FXP_SETSTAT, &buf, SSH_FXP_STATUS, NULL);
@@ -2153,6 +2226,9 @@ static int sshfs_open_common(const char *path, mode_t mode,
 	sf = g_new0(struct sshfs_file, 1);
 	list_init(&sf->write_reqs);
 	pthread_cond_init(&sf->write_finished, NULL);
+#ifdef __APPLE__
+	pthread_mutex_init(&sf->file_lock, NULL);
+#endif
 	/* Assume random read after open */
 	sf->is_seq = 0;
 	sf->refs = 1;
@@ -2186,11 +2262,21 @@ static int sshfs_open_common(const char *path, mode_t mode,
 	}
 
 	if (!err) {
+#ifdef __APPLE__
+		if (cache_enabled)
+			cache_add_attr(path, &stbuf, wrctr);
+#else
 		cache_add_attr(path, &stbuf, wrctr);
+#endif
 		buf_finish(&sf->handle);
 		fi->fh = (unsigned long) sf;
 	} else {
+#ifdef __APPLE__
+		if (cache_enabled)
+			cache_invalidate(path);
+#else
 		cache_invalidate(path);
+#endif
 		g_free(sf);
 	}
 	buf_free(&buf);
@@ -2245,14 +2331,32 @@ static int sshfs_fsync(const char *path, int isdatasync,
 
 static void sshfs_file_put(struct sshfs_file *sf)
 {
+#ifdef __APPLE__
+	pthread_mutex_lock(&sf->file_lock);
+#endif
 	sf->refs--;
+#ifdef __APPLE__
+	if (!sf->refs) {
+		pthread_mutex_unlock(&sf->file_lock);
+		g_free(sf);
+	} else {
+		pthread_mutex_unlock(&sf->file_lock);
+	}
+#else
 	if (!sf->refs)
 		g_free(sf);
+#endif
 }
 
 static void sshfs_file_get(struct sshfs_file *sf)
 {
+#ifdef __APPLE__
+	pthread_mutex_lock(&sf->file_lock);
+#endif
 	sf->refs++;
+#ifdef __APPLE__
+	pthread_mutex_unlock(&sf->file_lock);
+#endif
 }
 
 static int sshfs_release(const char *path, struct fuse_file_info *fi)
@@ -2942,7 +3046,12 @@ static int sshfs_opt_proc(void *data, const char *arg, int key,
 		exit(1);
 
 	case KEY_VERSION:
+#ifdef __APPLE__
+		fprintf(stderr, "SSHFS version %s (fuse4x %s)\n",
+			PACKAGE_VERSION, FUSE4X_VERSION);
+#else
 		fprintf(stderr, "SSHFS version %s\n", PACKAGE_VERSION);
+#endif
 #if FUSE_VERSION >= 25
 		fuse_opt_add_arg(outargs, "--version");
 		sshfs_fuse_main(outargs);
@@ -3026,6 +3135,15 @@ static int read_password(void)
 		perror("Failed to allocate locked page for password");
 		return -1;
 	}
+#ifdef __APPLE__
+	if (mlock(sshfs.password, size) != 0) {
+		memset(sshfs.password, 0, size);
+		munmap(sshfs.password, size);
+		sshfs.password = NULL;
+		perror("Failed to allocate locked page for password");
+		return -1;
+	}
+#endif /* __APPLE__ */
 
 	/* Don't use fgets() because password might stay in memory */
 	for (n = 0; n < max_password; n++) {
@@ -3073,7 +3191,7 @@ static void set_ssh_command(void)
 				replace_arg(&sshfs.ssh_args.argv[0],
 					    sshfs.ssh_command);
 			} else {
-				if (fuse_opt_insert_arg(&sshfs.ssh_args, i, 
+				if (fuse_opt_insert_arg(&sshfs.ssh_args, i,
 						sshfs.ssh_command) == -1)
 					_exit(1);
 			}
@@ -3157,8 +3275,17 @@ static char *fsname_escape_commas(char *fsnameold)
 }
 #endif
 
+#ifdef __APPLE__
+int main(int argc, char *argv[], __unused char *envp[], char **exec_path)
+#else
 int main(int argc, char *argv[])
+#endif
 {
+#ifdef __APPLE__
+	if (!realpath(*exec_path, sshfs_program_path)) {
+		memset(sshfs_program_path, 0, PATH_MAX);
+	}
+#endif
 	int res;
 	struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
 	char *tmp;
@@ -3167,6 +3294,10 @@ int main(int argc, char *argv[])
 	const char *sftp_server;
 	int libver;
 
+#ifdef __APPLE__
+	/* Until this gets fixed somewhere else. */
+	g_slice_set_config(G_SLICE_CONFIG_ALWAYS_MALLOC, TRUE);
+#endif /* __APPLE__ */
 	g_thread_init(NULL);
 
 	sshfs.blksize = 4096;
@@ -3174,7 +3305,11 @@ int main(int argc, char *argv[])
 	sshfs.max_write = 65536;
 	sshfs.nodelay_workaround = 1;
 	sshfs.nodelaysrv_workaround = 0;
+#ifdef __APPLE__
+	sshfs.rename_workaround = 1;
+#else
 	sshfs.rename_workaround = 0;
+#endif /* __APPLE__ */
 	sshfs.truncate_workaround = 0;
 	sshfs.buflimit_workaround = 1;
 	sshfs.ssh_ver = 2;
@@ -3186,6 +3321,10 @@ int main(int argc, char *argv[])
 	ssh_add_arg("-x");
 	ssh_add_arg("-a");
 	ssh_add_arg("-oClearAllForwardings=yes");
+
+#ifdef __APPLE__
+	sshfs.detect_uid = 1;
+#endif
 
 	if (fuse_opt_parse(&args, &sshfs, sshfs_opts, sshfs_opt_proc) == -1 ||
 	    parse_workarounds() == -1)
