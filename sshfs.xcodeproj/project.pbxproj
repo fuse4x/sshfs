@@ -1,0 +1,209 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		DE0F21EB139A7AFF003CBAC9 /* sshfs.c in Sources */ = {isa = PBXBuildFile; fileRef = DE0F21EA139A7AFF003CBAC9 /* sshfs.c */; };
+		DE0F21EF139A7B0A003CBAC9 /* cache.c in Sources */ = {isa = PBXBuildFile; fileRef = DE0F21ED139A7B0A003CBAC9 /* cache.c */; };
+		DE0F21F1139A7B11003CBAC9 /* sshnodelay.c in Sources */ = {isa = PBXBuildFile; fileRef = DE0F21F0139A7B11003CBAC9 /* sshnodelay.c */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		DE0F21D3139A7ABB003CBAC9 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		DE0F21D5139A7ABB003CBAC9 /* sshfs */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = sshfs; sourceTree = BUILT_PRODUCTS_DIR; };
+		DE0F21E9139A7AFF003CBAC9 /* sshfs.1 */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.man; path = sshfs.1; sourceTree = "<group>"; };
+		DE0F21EA139A7AFF003CBAC9 /* sshfs.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sshfs.c; sourceTree = "<group>"; };
+		DE0F21ED139A7B0A003CBAC9 /* cache.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = cache.c; sourceTree = "<group>"; };
+		DE0F21EE139A7B0A003CBAC9 /* cache.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = cache.h; sourceTree = "<group>"; };
+		DE0F21F0139A7B11003CBAC9 /* sshnodelay.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sshnodelay.c; sourceTree = "<group>"; };
+		DE0F21F2139A7B1D003CBAC9 /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = config.h; sourceTree = "<group>"; };
+		DE0F21F3139A7B23003CBAC9 /* autogen.sh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.sh; path = autogen.sh; sourceTree = "<group>"; };
+		DE0F21FC139B1EC3003CBAC9 /* configure.ac */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = configure.ac; sourceTree = "<group>"; };
+		DE0F21FE139B1ECB003CBAC9 /* Makefile.am */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Makefile.am; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		DE0F21D2139A7ABB003CBAC9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		DE0F21CA139A7ABB003CBAC9 = {
+			isa = PBXGroup;
+			children = (
+				DE0F21FE139B1ECB003CBAC9 /* Makefile.am */,
+				DE0F21FC139B1EC3003CBAC9 /* configure.ac */,
+				DE0F21F3139A7B23003CBAC9 /* autogen.sh */,
+				DE0F21F2139A7B1D003CBAC9 /* config.h */,
+				DE0F21F0139A7B11003CBAC9 /* sshnodelay.c */,
+				DE0F21ED139A7B0A003CBAC9 /* cache.c */,
+				DE0F21EE139A7B0A003CBAC9 /* cache.h */,
+				DE0F21E9139A7AFF003CBAC9 /* sshfs.1 */,
+				DE0F21EA139A7AFF003CBAC9 /* sshfs.c */,
+				DE0F21D6139A7ABB003CBAC9 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		DE0F21D6139A7ABB003CBAC9 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				DE0F21D5139A7ABB003CBAC9 /* sshfs */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		DE0F21D4139A7ABB003CBAC9 /* sshfs */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DE0F21DE139A7ABB003CBAC9 /* Build configuration list for PBXNativeTarget "sshfs" */;
+			buildPhases = (
+				DE0F21D1139A7ABB003CBAC9 /* Sources */,
+				DE0F21D2139A7ABB003CBAC9 /* Frameworks */,
+				DE0F21D3139A7ABB003CBAC9 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = sshfs;
+			productName = sshfs;
+			productReference = DE0F21D5139A7ABB003CBAC9 /* sshfs */;
+			productType = "com.apple.product-type.tool";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		DE0F21CC139A7ABB003CBAC9 /* Project object */ = {
+			isa = PBXProject;
+			buildConfigurationList = DE0F21CF139A7ABB003CBAC9 /* Build configuration list for PBXProject "sshfs" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = DE0F21CA139A7ABB003CBAC9;
+			productRefGroup = DE0F21D6139A7ABB003CBAC9 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				DE0F21D4139A7ABB003CBAC9 /* sshfs */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		DE0F21D1139A7ABB003CBAC9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DE0F21EB139A7AFF003CBAC9 /* sshfs.c in Sources */,
+				DE0F21EF139A7B0A003CBAC9 /* cache.c in Sources */,
+				DE0F21F1139A7B11003CBAC9 /* sshnodelay.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		DE0F21DC139A7ABB003CBAC9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = DEBUG;
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		DE0F21DD139A7ABB003CBAC9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		DE0F21DF139A7ABB003CBAC9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		DE0F21E0139A7ABB003CBAC9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		DE0F21CF139A7ABB003CBAC9 /* Build configuration list for PBXProject "sshfs" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DE0F21DC139A7ABB003CBAC9 /* Debug */,
+				DE0F21DD139A7ABB003CBAC9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		DE0F21DE139A7ABB003CBAC9 /* Build configuration list for PBXNativeTarget "sshfs" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DE0F21DF139A7ABB003CBAC9 /* Debug */,
+				DE0F21E0139A7ABB003CBAC9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = DE0F21CC139A7ABB003CBAC9 /* Project object */;
+}
