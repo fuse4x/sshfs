@@ -19,7 +19,11 @@
 #include <string.h>
 #include <stdint.h>
 #include <errno.h>
+#ifdef __APPLE__
+#include <darwin_semaphore.h>
+#else
 #include <semaphore.h>
+#endif
 #include <pthread.h>
 #include <netdb.h>
 #include <signal.h>

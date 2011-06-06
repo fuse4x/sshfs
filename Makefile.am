@@ -2,14 +2,14 @@
 
 bin_PROGRAMS = sshfs
 
-sshfs_SOURCES = sshfs.c cache.c cache.h
+sshfs_SOURCES = sshfs.c cache.c cache.h compat/darwin_semaphore.h compat/darwin_semaphore.c
 if FUSE_OPT_COMPAT
 sshfs_SOURCES += compat/fuse_opt.c compat/fuse_opt.h
 endif
 
 sshfs_LDADD = $(SSHFS_LIBS)
 sshfs_CFLAGS = $(SSHFS_CFLAGS)
-sshfs_CPPFLAGS = -D_REENTRANT -DFUSE_USE_VERSION=26 -DLIBDIR=\"$(libdir)\"
+sshfs_CPPFLAGS = -D_REENTRANT -DFUSE_USE_VERSION=26 -DLIBDIR=\"$(libdir)\" -Icompat
 
 EXTRA_DIST = sshnodelay.c FAQ.txt
 CLEANFILES = sshnodelay.so
