@@ -4,7 +4,7 @@ AM_CONFIG_HEADER(config.h)
 
 AC_PROG_CC
 AM_PROG_CC_C_O
-CFLAGS="$CFLAGS -Wall -W"
+CFLAGS="$CFLAGS -Wall -W -mmacosx-version-min=10.5"
 LIBS=
 AC_SEARCH_LIBS(dlsym, [dl])
 sshnodelay_libs=$LIBS
