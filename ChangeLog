@@ -1,3 +1,50 @@
+2011-07-01  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Released 2.3
+
+2011-07-01  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Add hard link operation.  Works if the server supports the
+	"hardlink@openssh.com" protocol extension.
+
+2011-03-25  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Fix possible deadlock on reconnection.  Reported by Florian
+	Zumbiehl
+
+2011-01-25  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Fix cleanup when ssh connection is terminated.  This prevents
+	sshfs hanging when the server is rebooted, for example.
+
+2010-03-16  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Set FD_CLOEXEC on fuse device.  This prevents deadlocks that
+	happen in some circumstances (bugzilla.kernel.org #12864).
+	Reported by Tim Connors
+
+2009-07-15  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Check mountpoint and fuse options before starting an ssh
+	session (debian bug #535333).  This is only supported if compiled
+	against libfuse-2.6 or later. Reported by Greg Kochanski
+
+	* Check that the remote path specified refers to the same type of
+	file as the mountpoint, i.e. both are directories or both are
+	non-directories (debian bug #535343).  Reported by Greg Kochanski
+
+	* Allow mounting a single non-directory from the server
+
+2009-07-15  Sebastian Dransfeld <sebastid@tango.flipp.net>
+
+	* Add option 'delay_connect': This will always create the sshfs mount,
+	even if the connection to the server can't be established.
+
+2009-01-27  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Print usage information and version to stdout, not stderr.
+	Libfuse also needs to be fixed up.  Reported by Kārlis Repsons
+
 2008-10-20  Miklos Szeredi <miklos@szeredi.hu>
 
 	* Released 2.2

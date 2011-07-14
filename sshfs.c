@@ -11,6 +11,7 @@
 
 #include <fuse.h>
 #include <fuse_opt.h>
+#include <fuse_lowlevel.h>
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -39,7 +40,6 @@
 #include <netinet/tcp.h>
 #include <glib.h>
 #ifdef __APPLE__
-#include <fuse_version.h>
 #include <libgen.h>
 #include <strings.h>
 #endif
@@ -54,10 +54,6 @@
 #define MAP_ANONYMOUS MAP_ANON
 #endif
 
-
-#if FUSE_VERSION >= 23
-#define SSHFS_USE_INIT
-#endif
 
 #define SSH_FXP_INIT                1
 #define SSH_FXP_VERSION             2
@@ -116,6 +112,7 @@
 
 #define SFTP_EXT_POSIX_RENAME "posix-rename@openssh.com"
 #define SFTP_EXT_STATVFS "statvfs@openssh.com"
+#define SFTP_EXT_HARDLINK "hardlink@openssh.com"
 
 #define PROTO_VERSION 3
 
@@ -216,6 +213,7 @@ struct sshfs {
 	int debug;
 	int foreground;
 	int reconnect;
+	int delay_connect;
 	char *host;
 	char *base_path;
 	GHashTable *reqtab;
@@ -245,6 +243,8 @@ struct sshfs {
 	char *password;
 	int ext_posix_rename;
 	int ext_statvfs;
+	int ext_hardlink;
+	mode_t mnt_mode;
 
 	/* statistics */
 	uint64_t bytes_sent;
@@ -338,6 +338,7 @@ static struct fuse_opt sshfs_opts[] = {
 	SSHFS_OPT("follow_symlinks",   follow_symlinks, 1),
 	SSHFS_OPT("no_check_root",     no_check_root, 1),
 	SSHFS_OPT("password_stdin",    password_stdin, 1),
+	SSHFS_OPT("delay_connect",     delay_connect, 1),
 
 	FUSE_OPT_KEY("-p ",            KEY_PORT),
 	FUSE_OPT_KEY("-C",             KEY_COMPRESS),
@@ -548,8 +549,26 @@ static inline void buf_add_path(struct buffer *buf, const char *path)
 {
 	char *realpath;
 
-	realpath = g_strdup_printf("%s%s", sshfs.base_path,
-				   path[1] ? path+1 : ".");
+	if (sshfs.base_path[0]) {
+		if (path[1]) {
+			if (sshfs.base_path[strlen(sshfs.base_path)-1] != '/') {
+				realpath = g_strdup_printf("%s/%s",
+							   sshfs.base_path,
+							   path + 1);
+			} else {
+				realpath = g_strdup_printf("%s%s",
+							   sshfs.base_path,
+							   path + 1);
+			}
+		} else {
+			realpath = g_strdup(sshfs.base_path);
+		}
+	} else {
+		if (path[1])
+			realpath = g_strdup(path + 1);
+		else
+			realpath = g_strdup(".");
+	}
 	buf_add_string(buf, realpath);
 	g_free(realpath);
 }
@@ -1361,17 +1380,18 @@ static void *process_requests(void *data_)
 			break;
 	}
 
+	pthread_mutex_lock(&sshfs.lock);
+	sshfs.processing_thread_started = 0;
+	close_conn();
+	g_hash_table_foreach_remove(sshfs.reqtab, (GHRFunc) clean_req, NULL);
+	sshfs.connver ++;
+	sshfs.outstanding_len = 0;
+	pthread_cond_broadcast(&sshfs.outstanding_cond);
+	pthread_mutex_unlock(&sshfs.lock);
+
 	if (!sshfs.reconnect) {
 		/* harakiri */
 		kill(getpid(), SIGTERM);
-	} else {
-		pthread_mutex_lock(&sshfs.lock);
-		sshfs.processing_thread_started = 0;
-		close_conn();
-		g_hash_table_foreach_remove(sshfs.reqtab, (GHRFunc) clean_req,
-					    NULL);
-		sshfs.connver ++;
-		pthread_mutex_unlock(&sshfs.lock);
 	}
 	return NULL;
 }
@@ -1423,6 +1443,9 @@ static int sftp_init_reply_ok(struct buffer *buf, uint32_t *version)
 			if (strcmp(ext, SFTP_EXT_STATVFS) == 0 &&
 			    strcmp(extdata, "2") == 0)
 				sshfs.ext_statvfs = 1;
+			if (strcmp(ext, SFTP_EXT_HARDLINK) == 0 &&
+			    strcmp(extdata, "1") == 0)
+				sshfs.ext_hardlink = 1;
 		} while (buf2.len < buf2.size);
 	}
 	return 0;
@@ -1601,9 +1624,14 @@ static int sftp_check_root(const char *base_path)
 	if (!(flags & SSH_FILEXFER_ATTR_PERMISSIONS))
 		goto out;
 
-	if (!S_ISDIR(stbuf.st_mode)) {
+	if (S_ISDIR(sshfs.mnt_mode) && !S_ISDIR(stbuf.st_mode)) {
 		fprintf(stderr, "%s:%s: Not a directory\n", sshfs.host,
 			remote_dir);
+		goto out;
+	}
+	if ((sshfs.mnt_mode ^ stbuf.st_mode) & S_IFMT) {
+		fprintf(stderr, "%s:%s: type of file differs from mountpoint\n",
+			sshfs.host, remote_dir);
 		goto out;
 	}
 
@@ -1649,6 +1677,11 @@ static int start_processing_thread(void)
 			return -EIO;
 	}
 
+	if (sshfs.detect_uid) {
+		sftp_detect_uid();
+		sshfs.detect_uid = 0;
+	}
+
 	sigemptyset(&newset);
 	sigaddset(&newset, SIGTERM);
 	sigaddset(&newset, SIGINT);
@@ -1666,11 +1699,10 @@ static int start_processing_thread(void)
 	return 0;
 }
 
-#ifdef SSHFS_USE_INIT
 #if FUSE_VERSION >= 26
 static void *sshfs_init(struct fuse_conn_info *conn)
 #else
-	static void *sshfs_init(void)
+static void *sshfs_init(void)
 #endif
 {
 #if FUSE_VERSION >= 26
@@ -1679,13 +1711,11 @@ static void *sshfs_init(struct fuse_conn_info *conn)
 		sshfs.sync_read = 1;
 #endif
 
-	if (sshfs.detect_uid)
-		sftp_detect_uid();
+	if (!sshfs.delay_connect)
+		start_processing_thread();
 
-	start_processing_thread();
 	return NULL;
 }
-#endif
 
 static int sftp_request_wait(struct request *req, uint8_t type,
                              uint8_t expect_type, struct buffer *outbuf)
@@ -2116,6 +2146,25 @@ static int sshfs_rename(const char *from, const char *to)
 			}
 		}
 	}
+	return err;
+}
+
+static int sshfs_link(const char *from, const char *to)
+{
+	int err = -ENOSYS;
+
+	if (sshfs.ext_hardlink) {
+		struct buffer buf;
+
+		buf_init(&buf, 0);
+		buf_add_string(&buf, SFTP_EXT_HARDLINK);
+		buf_add_path(&buf, from);
+		buf_add_path(&buf, to);
+		err = sftp_request(SSH_FXP_EXTENDED, &buf, SSH_FXP_STATUS,
+				   NULL);
+		buf_free(&buf);
+	}
+
 	return err;
 }
 
@@ -2902,9 +2951,7 @@ static int processing_init(void)
 
 static struct fuse_cache_operations sshfs_oper = {
 	.oper = {
-#ifdef SSHFS_USE_INIT
 		.init       = sshfs_init,
-#endif
 		.getattr    = sshfs_getattr,
 		.readlink   = sshfs_readlink,
 		.mknod      = sshfs_mknod,
@@ -2913,6 +2960,7 @@ static struct fuse_cache_operations sshfs_oper = {
 		.unlink     = sshfs_unlink,
 		.rmdir      = sshfs_rmdir,
 		.rename     = sshfs_rename,
+		.link       = sshfs_link,
 		.chmod      = sshfs_chmod,
 		.chown      = sshfs_chown,
 		.truncate   = sshfs_truncate,
@@ -2935,7 +2983,7 @@ static struct fuse_cache_operations sshfs_oper = {
 
 static void usage(const char *progname)
 {
-	fprintf(stderr,
+	printf(
 "usage: %s [user@]host:[dir] mountpoint [options]\n"
 "\n"
 "general options:\n"
@@ -2949,10 +2997,11 @@ static void usage(const char *progname)
 "    -F ssh_configfile      specifies alternative ssh configuration file\n"
 "    -1                     equivalent to '-o ssh_protocol=1'\n"
 "    -o reconnect           reconnect to server\n"
+"    -o delay_connect       delay connection to server\n"
 "    -o sshfs_sync          synchronous writes\n"
 "    -o no_readahead        synchronous reads (no speculative readahead)\n"
 "    -o sshfs_debug         print some debugging information\n"
-"    -o cache=YESNO         enable caching {yes,no} (default: yes)\n"
+"    -o cache=BOOL          enable caching {yes,no} (default: yes)\n"
 "    -o cache_timeout=N     sets timeout for caches in seconds (default: 20)\n"
 "    -o cache_X_timeout=N   sets timeout for {stat,dir,link} cache\n"
 "    -o workaround=LIST     colon separated list of workarounds\n"
@@ -3050,12 +3099,7 @@ static int sshfs_opt_proc(void *data, const char *arg, int key,
 		exit(1);
 
 	case KEY_VERSION:
-#ifdef __APPLE__
-		fprintf(stderr, "SSHFS version %s (fuse4x %s)\n",
-			PACKAGE_VERSION, FUSE4X_VERSION);
-#else
-		fprintf(stderr, "SSHFS version %s\n", PACKAGE_VERSION);
-#endif
+		printf("SSHFS version %s\n", PACKAGE_VERSION);
 #if FUSE_VERSION >= 25
 		fuse_opt_add_arg(outargs, "--version");
 		sshfs_fuse_main(outargs);
@@ -3279,11 +3323,27 @@ static char *fsname_escape_commas(char *fsnameold)
 }
 #endif
 
-#ifdef __APPLE__
+static int ssh_connect(void)
+{
+	int res;
+
+	res = processing_init();
+	if (res == -1)
+		return -1;
+
+	if (!sshfs.delay_connect) {
+		if (connect_remote() == -1)
+			return -1;
+
+		if (!sshfs.no_check_root &&
+		    sftp_check_root(sshfs.base_path) == -1)
+			return -1;
+
+	}
+	return 0;
+}
+
 int main(int argc, char *argv[], __unused char *envp[], char **exec_path)
-#else
-int main(int argc, char *argv[])
-#endif
 {
 #ifdef __APPLE__
 	if (!realpath(*exec_path, sshfs_program_path)) {
@@ -3294,7 +3354,6 @@ int main(int argc, char *argv[])
 	struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
 	char *tmp;
 	char *fsname;
-	char *base_path;
 	const char *sftp_server;
 	int libver;
 
@@ -3321,6 +3380,7 @@ int main(int argc, char *argv[])
 	sshfs.fd = -1;
 	sshfs.ptyfd = -1;
 	sshfs.ptyslavefd = -1;
+	sshfs.delay_connect = 0;
 	ssh_add_arg("ssh");
 	ssh_add_arg("-x");
 	ssh_add_arg("-a");
@@ -3357,11 +3417,7 @@ int main(int argc, char *argv[])
 	}
 
 	fsname = g_strdup(sshfs.host);
-	base_path = find_base_path();
-	if (base_path[0] && base_path[strlen(base_path)-1] != '/')
-		sshfs.base_path = g_strdup_printf("%s/", base_path);
-	else
-		sshfs.base_path = g_strdup(base_path);
+	sshfs.base_path = g_strdup(find_base_path());
 
 	if (sshfs.ssh_command)
 		set_ssh_command();
@@ -3383,20 +3439,6 @@ int main(int argc, char *argv[])
 	ssh_add_arg(sftp_server);
 	free(sshfs.sftp_server);
 
-	res = processing_init();
-	if (res == -1)
-		exit(1);
-
-	if (connect_remote() == -1)
-		exit(1);
-
-#ifndef SSHFS_USE_INIT
-	if (sshfs.detect_uid)
-		sftp_detect_uid();
-#endif
-
-	if (!sshfs.no_check_root && sftp_check_root(base_path) == -1)
-		exit(1);
 
 	res = cache_parse_options(&args);
 	if (res == -1)
@@ -3413,6 +3455,7 @@ int main(int argc, char *argv[])
 		fuse_opt_insert_arg(&args, 1, "-oauto_cache,ac_attr_timeout=0");
 	tmp = g_strdup_printf("-omax_read=%u", sshfs.max_read);
 	fuse_opt_insert_arg(&args, 1, tmp);
+	g_free(tmp);
 	tmp = g_strdup_printf("-omax_write=%u", sshfs.max_write);
 	fuse_opt_insert_arg(&args, 1, tmp);
 	g_free(tmp);
@@ -3432,7 +3475,82 @@ int main(int argc, char *argv[])
 	g_free(tmp);
 	g_free(fsname);
 	check_large_read(&args);
+
+#if FUSE_VERSION >= 26
+	{
+		struct fuse *fuse;
+		struct fuse_chan *ch;
+		char *mountpoint;
+		int multithreaded;
+		int foreground;
+		struct stat st;
+
+		res = fuse_parse_cmdline(&args, &mountpoint, &multithreaded, 
+					 &foreground);
+		if (res == -1)
+			exit(1);
+
+		res = stat(mountpoint, &st);
+		if (res == -1) {
+			perror(mountpoint);
+			exit(1);
+		}
+		sshfs.mnt_mode = st.st_mode;
+
+		ch = fuse_mount(mountpoint, &args);
+		if (!ch)
+			exit(1);
+
+		res = fcntl(fuse_chan_fd(ch), F_SETFD, FD_CLOEXEC);
+		if (res == -1)
+			perror("WARNING: failed to set FD_CLOESEC on fuse device");
+
+		fuse = fuse_new(ch, &args, cache_init(&sshfs_oper),
+				sizeof(struct fuse_operations), NULL);
+		if (fuse == NULL) {
+			fuse_unmount(mountpoint, ch);
+			exit(1);
+		}
+
+		res = ssh_connect();
+		if (res == -1) {
+			fuse_unmount(mountpoint, ch);
+			fuse_destroy(fuse);
+			exit(1);
+		}
+
+		res = fuse_daemonize(foreground);
+		if (res != -1)
+			res = fuse_set_signal_handlers(fuse_get_session(fuse));
+
+		if (res == -1) {
+			fuse_unmount(mountpoint, ch);
+			fuse_destroy(fuse);
+			exit(1);
+		}
+
+		if (multithreaded)
+			res = fuse_loop_mt(fuse);
+		else
+			res = fuse_loop(fuse);
+
+		if (res == -1)
+			res = 1;
+		else
+			res = 0;
+
+		fuse_remove_signal_handlers(fuse_get_session(fuse));
+		fuse_unmount(mountpoint, ch);
+		fuse_destroy(fuse);
+		free(mountpoint);
+	}
+#else
+	res = ssh_connect();
+	if (res == -1)
+		exit(1);
+
 	res = sshfs_fuse_main(&args);
+#endif
 
 	if (sshfs.debug) {
 		unsigned int avg_rtt = 0;
