@@ -10,6 +10,8 @@
 		DE0F21EB139A7AFF003CBAC9 /* sshfs.c in Sources */ = {isa = PBXBuildFile; fileRef = DE0F21EA139A7AFF003CBAC9 /* sshfs.c */; };
 		DE0F21EF139A7B0A003CBAC9 /* cache.c in Sources */ = {isa = PBXBuildFile; fileRef = DE0F21ED139A7B0A003CBAC9 /* cache.c */; };
 		DE0F21F1139A7B11003CBAC9 /* sshnodelay.c in Sources */ = {isa = PBXBuildFile; fileRef = DE0F21F0139A7B11003CBAC9 /* sshnodelay.c */; };
+		DE37D32813CF7B660027D6F9 /* darwin_semaphore.c in Sources */ = {isa = PBXBuildFile; fileRef = DE37D32413CF7B660027D6F9 /* darwin_semaphore.c */; };
+		DE37D32913CF7B660027D6F9 /* fuse_opt.c in Sources */ = {isa = PBXBuildFile; fileRef = DE37D32613CF7B660027D6F9 /* fuse_opt.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -32,9 +34,12 @@
 		DE0F21EE139A7B0A003CBAC9 /* cache.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = cache.h; sourceTree = "<group>"; };
 		DE0F21F0139A7B11003CBAC9 /* sshnodelay.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sshnodelay.c; sourceTree = "<group>"; };
 		DE0F21F2139A7B1D003CBAC9 /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = config.h; sourceTree = "<group>"; };
-		DE0F21F3139A7B23003CBAC9 /* autogen.sh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.sh; path = autogen.sh; sourceTree = "<group>"; };
 		DE0F21FC139B1EC3003CBAC9 /* configure.ac */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = configure.ac; sourceTree = "<group>"; };
 		DE0F21FE139B1ECB003CBAC9 /* Makefile.am */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Makefile.am; sourceTree = "<group>"; };
+		DE37D32413CF7B660027D6F9 /* darwin_semaphore.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = darwin_semaphore.c; sourceTree = "<group>"; };
+		DE37D32513CF7B660027D6F9 /* darwin_semaphore.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = darwin_semaphore.h; sourceTree = "<group>"; };
+		DE37D32613CF7B660027D6F9 /* fuse_opt.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = fuse_opt.c; sourceTree = "<group>"; };
+		DE37D32713CF7B660027D6F9 /* fuse_opt.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = fuse_opt.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -51,9 +56,9 @@
 		DE0F21CA139A7ABB003CBAC9 = {
 			isa = PBXGroup;
 			children = (
+				DE37D32313CF7B660027D6F9 /* compat */,
 				DE0F21FE139B1ECB003CBAC9 /* Makefile.am */,
 				DE0F21FC139B1EC3003CBAC9 /* configure.ac */,
-				DE0F21F3139A7B23003CBAC9 /* autogen.sh */,
 				DE0F21F2139A7B1D003CBAC9 /* config.h */,
 				DE0F21F0139A7B11003CBAC9 /* sshnodelay.c */,
 				DE0F21ED139A7B0A003CBAC9 /* cache.c */,
@@ -70,6 +75,17 @@
 				DE0F21D5139A7ABB003CBAC9 /* sshfs */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		DE37D32313CF7B660027D6F9 /* compat */ = {
+			isa = PBXGroup;
+			children = (
+				DE37D32413CF7B660027D6F9 /* darwin_semaphore.c */,
+				DE37D32513CF7B660027D6F9 /* darwin_semaphore.h */,
+				DE37D32613CF7B660027D6F9 /* fuse_opt.c */,
+				DE37D32713CF7B660027D6F9 /* fuse_opt.h */,
+			);
+			path = compat;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -122,6 +138,8 @@
 				DE0F21EB139A7AFF003CBAC9 /* sshfs.c in Sources */,
 				DE0F21EF139A7B0A003CBAC9 /* cache.c in Sources */,
 				DE0F21F1139A7B11003CBAC9 /* sshnodelay.c in Sources */,
+				DE37D32813CF7B660027D6F9 /* darwin_semaphore.c in Sources */,
+				DE37D32913CF7B660027D6F9 /* fuse_opt.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
