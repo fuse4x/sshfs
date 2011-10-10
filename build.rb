@@ -1,10 +1,8 @@
 #!/usr/bin/env ruby
 # Possible flags are:
-#   --debug       this builds distribuition with debug flags enabled
+#   --release     build this module for final distribution
 #   --root DIR    install the binary into this directory. If this flag is not set - the script
 #                 redeploys kext to local machine and restarts it
-#   --static      build static sshfs binary, it dynamically links only with fuse4x library
-#   --clean       clean before build
 
 require 'fileutils'
 
@@ -12,18 +10,21 @@ CWD = File.dirname(__FILE__)
 KEXT_DIR = '/System/Library/Extensions/'
 Dir.chdir(CWD)
 
-debug = ARGV.include?('--debug')
-clean = ARGV.include?('--clean')
-static = ARGV.include?('--static')
+release = ARGV.include?('--release')
 root_dir = ARGV.index('--root') ? ARGV[ARGV.index('--root') + 1] : nil
 
 abort("root directory #{root_dir} does not exist") if ARGV.index('--root') and not File.exists?(root_dir)
 
-system('git clean -xdf') if clean
+system('git clean -xdf') if release
 
 unless File.exists?('Makefile') then
+  flags = ''
+  if release then
+    flags += "CFLAGS='-mmacosx-version-min=10.5'"
+  end
+
   system("autoreconf -f -i -Wall,no-obsolete") or abort
-  system("./configure") or abort
+  system("./configure #{flags}") or abort
 end
 
 tmp_dir = "/tmp/sshfsbuild-#{Process.pid}"
@@ -31,7 +32,7 @@ Dir.mkdir(tmp_dir)
 
 ld_flags = ''
 dylibs = %w(iconv gthread-2.0 glib-2.0 intl)
-if static
+if release
   # In case if we build the distribution we need statically link against
   # macports libraries from the 'dylibs' list above.
   # To do it - we trick the build system by adding temp path with static libraries.
