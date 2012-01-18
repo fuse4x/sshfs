@@ -21,6 +21,8 @@ unless File.exists?('Makefile') then
   flags = ''
   if release then
     flags += "CFLAGS='-mmacosx-version-min=10.5'"
+  else
+    flags += "CFLAGS='-g -O0'"
   end
 
   system("autoreconf -f -i -Wall,no-obsolete") or abort
