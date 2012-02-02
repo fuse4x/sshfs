@@ -7,7 +7,6 @@
 require 'fileutils'
 
 CWD = File.dirname(__FILE__)
-KEXT_DIR = '/System/Library/Extensions/'
 Dir.chdir(CWD)
 
 release = ARGV.include?('--release')
