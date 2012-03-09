@@ -1,3 +1,55 @@
+2012-03-08  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Released 2.4
+
+2012-03-08  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Make sure idmap files aren't writable by others otherwise, other
+	local users could change the mapping, and gain access to things
+	they shouldn't.  Patch by Mike Kelly
+
+2012-02-08  Chris Wolfe <cwolfe@chromium.org>
+
+	* Add -o slave. This option routes the sftp communication over stdin
+	and stdout, bypassing SSH and network.
+
+2011-12-16  Mike Kelly <mike@pair.com>
+
+	* Add -o idmap=file, -o uidmap=FILE, -o gidmap=FILE. These options
+	allow you to create a pair of local files, similar to /etc/passwd or
+	/etc/group files from the remote server, and use those to remap all
+	the given UIDs/GIDs.
+
+2011-11-25  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Make chown respect the UID mapping policy.  Reported and tested
+	by Vivenzio Pagliari
+
+2011-11-16  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Submit max 32k reads and writes to the sftp server.  Also don't
+	limit the kernel to 64k reads and writes, rather split into 32k
+	sized chunks and send them to the server all at once.  This is
+	more efficient and less demanding from the server.  Reported by
+	Ludovic Courtès.  Fix suggested by Niels Möller
+
+2011-11-14  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Fix double free if reconnection races with request sending.
+	Patch by E. Kuemmerle
+
+	* Add locking around modifver and connver
+
+2011-10-21  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Remove "-oPreferredAuthentications" from ssh options if the
+	"password_stdin" option is used.  Reported by E. Kuemmerle
+
+2011-08-24  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Add "-oworkaround=fstat" for SFTP servers which don't support
+	the FSTAT message.  Patch by: Percy Jahn
+
 2011-07-01  Miklos Szeredi <miklos@szeredi.hu>
 
 	* Released 2.3

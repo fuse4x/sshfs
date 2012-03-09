@@ -102,6 +102,29 @@ no translation of the ID space (default)
 .TP
 user
 only translate UID of connecting user
+.TP
+file
+translate UIDs/GIDs based upon the contents of \fBuidfile \fR and
+\fBgidfile\fR
+.RE
+.TP
+\fB\-o\fR uidfile=FILE
+file containing username:uid mappings for \fBidmap=file\fR
+.RE
+.TP
+\fB\-o\fR gidfile=FILE
+file containing groupname:gid mappings for \fBidmap=file\fR
+.RE
+.TP
+\fB\-o\fR nomap=TYPE
+with idmap=file, how to handle missing mappings
+.RS 8
+.TP
+ignore
+don't do any re-mapping
+.TP
+error
+return an error (default)
 .RE
 .TP
 \fB\-o\fR ssh_command=CMD
@@ -115,6 +138,8 @@ path to sftp server or subsystem (default: sftp)
 .TP
 \fB\-o\fR directport=PORT
 directly connect to PORT bypassing ssh
+\fB\-o\fR slave
+communicate over stdin and stdout bypassing network
 .TP
 \fB\-o\fR transform_symlinks
 transform absolute symlinks to relative
@@ -150,7 +175,7 @@ allow access to root
 \fB\-o\fR nonempty
 allow mounts over non\-empty file/dir
 .HP
-\fB\-o\fR default_permissions 
+\fB\-o\fR default_permissions
 enable permission checking by kernel
 .TP
 \fB\-o\fR fsname=NAME
@@ -225,7 +250,7 @@ perform reads asynchronously (default)
 \fB\-o\fR sync_read
 perform reads synchronously
 .SS "Module options:"
-.TP 
+.TP
 [subdir]
 .TP
 \fB\-o\fR subdir=DIR
@@ -233,7 +258,7 @@ prepend this directory to all paths (mandatory)
 .TP
 \fB\-o\fR [no]rellinksa
 transform absolute symlinks to relative
-.TP 
+.TP
 [iconv]
 .TP
 \fB\-o\fR from_code=CHARSET
