@@ -158,7 +158,7 @@ struct fuse_args {
  *
  * The 'arg' parameter will always contain the whole argument or
  * option including the parameter if exists.  A two-argument option
- * ("-x foo") is always converted to single arguemnt option of the
+ * ("-x foo") is always converted to single argument option of the
  * form "-xfoo" before this function is called.
  *
  * Options of the form '-ofoo' are passed to this function without the
@@ -222,7 +222,7 @@ int fuse_opt_add_arg(struct fuse_args *args, const char *arg);
  * argument vector
  *
  * Adds the argument to the N-th position.  This is useful for adding
- * options at the beggining of the array which must not come after the
+ * options at the beginning of the array which must not come after the
  * special '--' option.
  *
  * @param args is the structure containing the current argument list
