@@ -539,7 +539,7 @@
 
 2005-02-09  Miklos Szeredi <miklos@szeredi.hu>
 
-	* Added option to start arbitary command instead of 'ssh'
+	* Added option to start arbitrary command instead of 'ssh'
 
 	* Re-added '-p PORT' as a convenience option, also '-C' works as
 	in ssh.
